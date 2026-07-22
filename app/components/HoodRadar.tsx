@@ -5,6 +5,7 @@ import { fetchChain, fetchWallets } from '@/lib/api';
 import { usePollingData } from '@/lib/usePollingData';
 import { useWatchlist } from '@/lib/watchlist';
 import ChainHeader from './ChainHeader';
+import PnlLeaderboard from './PnlLeaderboard';
 import Leaderboard from './Leaderboard';
 import Agents from './Agents';
 import LiveFeed from './LiveFeed';
@@ -12,14 +13,14 @@ import Watchlist from './Watchlist';
 import TokenExplorer from './TokenExplorer';
 import WalletDetail from './WalletDetail';
 
-type Tab = 'leaderboard' | 'agents' | 'feed' | 'watchlist' | 'tokens';
+type Tab = 'pnl' | 'leaderboard' | 'agents' | 'feed' | 'watchlist' | 'tokens';
 
 export default function HoodRadar() {
   const chain = usePollingData(fetchChain);
   const wallets = usePollingData(fetchWallets);
   const watch = useWatchlist();
 
-  const [tab, setTab] = useState<Tab>('leaderboard');
+  const [tab, setTab] = useState<Tab>('pnl');
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
   const [focusSymbol, setFocusSymbol] = useState<string | null>(null);
 
@@ -41,6 +42,7 @@ export default function HoodRadar() {
   };
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
+    { key: 'pnl', label: 'Top PnL' },
     { key: 'leaderboard', label: 'Leaderboard', count: walletList?.length },
     { key: 'agents', label: 'Agents' },
     { key: 'feed', label: 'Live Feed' },
@@ -79,6 +81,8 @@ export default function HoodRadar() {
           </button>
         ))}
       </nav>
+
+      {tab === 'pnl' && <PnlLeaderboard explorerUrl={explorerUrl} />}
 
       {tab === 'leaderboard' && (
         <Leaderboard

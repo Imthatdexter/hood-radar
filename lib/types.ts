@@ -216,3 +216,12 @@ export interface LeaderboardResponse {
   agents: LeaderboardAgent[];
   total: number | string;
 }
+
+// Dune-backed realized-PnL leaderboard row.
+export interface PnlRow {
+  trader: string;
+  realized_pnl: number;
+  volume_usd: number;
+  swaps: number;
+  tokens_traded: number;
+}
