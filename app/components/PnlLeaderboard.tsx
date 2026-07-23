@@ -1,48 +1,40 @@
 'use client';
 
-import { usePollingData } from '@/lib/usePollingData';
 import type { PnlRow } from '@/lib/types';
 import { fmtNum, fmtUsd, relTime } from '@/lib/format';
 import { Address, Flash } from './ui';
 
-interface PnlResponse {
-  configured?: boolean;
-  rows?: PnlRow[];
-  generatedAt?: string | null;
-  count?: number;
-  error?: string;
-}
-
 interface Props {
+  rows: PnlRow[];
+  loading: boolean;
+  configured: boolean;
+  error?: string;
+  generatedAt?: string | null;
   explorerUrl?: string;
+  onSelect: (address: string) => void;
 }
 
-async function fetchPnl(): Promise<PnlResponse> {
-  const r = await fetch('/api/pnl', { cache: 'no-store' });
-  return (await r.json()) as PnlResponse;
-}
-
-export default function PnlLeaderboard({ explorerUrl }: Props) {
-  const { data, loading } = usePollingData<PnlResponse>(fetchPnl, {
-    intervalMs: 60000,
-  });
-
-  const rows = data?.rows ?? [];
-  const configured = data?.configured ?? !loading;
-  const error = data?.error;
-
+export default function PnlLeaderboard({
+  rows,
+  loading,
+  configured,
+  error,
+  generatedAt,
+  explorerUrl,
+  onSelect,
+}: Props) {
   return (
     <div className="card">
       <div className="view-head">
         <div>
           <div className="view-title">
-            Top Traders by PnL
+            Top Wallets by PnL
             <span className="nav-count">{rows.length} of 50</span>
           </div>
           <div className="view-sub">
             Realized PnL across all Robinhood Chain DEX trades · average-cost basis
             · computed on Dune, refreshed ~every 6h
-            {data?.generatedAt ? ` · updated ${relTime(data.generatedAt)}` : ''}
+            {generatedAt ? ` · updated ${relTime(generatedAt)}` : ''}
           </div>
         </div>
       </div>
@@ -93,7 +85,11 @@ export default function PnlLeaderboard({ explorerUrl }: Props) {
                 const pnl = w.realized_pnl ?? 0;
                 const pos = pnl >= 0;
                 return (
-                  <tr className="row" key={w.trader}>
+                  <tr
+                    className="row row-clickable"
+                    key={w.trader}
+                    onClick={() => onSelect(w.trader)}
+                  >
                     <td>
                       <span className={`rank ${i < 3 ? `rank--${i + 1}` : ''}`}>
                         {i + 1}

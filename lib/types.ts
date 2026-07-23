@@ -225,3 +225,12 @@ export interface PnlRow {
   swaps: number;
   tokens_traded: number;
 }
+
+// Shape returned by the /api/pnl route (reads the latest scheduled Dune result).
+export interface PnlApiResponse {
+  configured?: boolean;
+  rows?: PnlRow[];
+  generatedAt?: string | null;
+  count?: number;
+  error?: string;
+}

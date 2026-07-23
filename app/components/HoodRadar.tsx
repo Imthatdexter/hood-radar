@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { fetchChain, fetchWallets } from '@/lib/api';
+import type { PnlApiResponse } from '@/lib/types';
 import { usePollingData } from '@/lib/usePollingData';
 import { useWatchlist } from '@/lib/watchlist';
 import ChainHeader from './ChainHeader';
@@ -15,9 +16,15 @@ import WalletDetail from './WalletDetail';
 
 type Tab = 'pnl' | 'leaderboard' | 'agents' | 'feed' | 'watchlist' | 'tokens';
 
+async function fetchPnl(): Promise<PnlApiResponse> {
+  const r = await fetch('/api/pnl', { cache: 'no-store' });
+  return (await r.json()) as PnlApiResponse;
+}
+
 export default function HoodRadar() {
   const chain = usePollingData(fetchChain);
   const wallets = usePollingData(fetchWallets);
+  const pnl = usePollingData<PnlApiResponse>(fetchPnl, { intervalMs: 60000 });
   const watch = useWatchlist();
 
   const [tab, setTab] = useState<Tab>('pnl');
@@ -27,13 +34,16 @@ export default function HoodRadar() {
   const explorerUrl = chain.data?.chain.explorerUrl;
   const tokens = chain.data?.tokens ?? [];
   const walletList = wallets.data?.wallets ?? null;
+  const pnlRows = pnl.data?.rows ?? [];
 
+  const lc = (a: string) => a.toLowerCase();
   const selectedWallet =
     walletList && selectedAddress
-      ? walletList.find(
-          (w) => w.address.toLowerCase() === selectedAddress.toLowerCase(),
-        ) ?? null
+      ? walletList.find((w) => lc(w.address) === lc(selectedAddress)) ?? null
       : null;
+  const selectedPnl = selectedAddress
+    ? pnlRows.find((r) => lc(r.trader) === lc(selectedAddress)) ?? null
+    : null;
 
   const openWallet = (address: string) => setSelectedAddress(address);
   const openToken = (symbol: string) => {
@@ -42,7 +52,7 @@ export default function HoodRadar() {
   };
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
-    { key: 'pnl', label: 'Top PnL' },
+    { key: 'pnl', label: 'Top Wallets by PnL' },
     { key: 'leaderboard', label: 'Leaderboard', count: walletList?.length },
     { key: 'agents', label: 'Agents' },
     { key: 'feed', label: 'Live Feed' },
@@ -82,8 +92,17 @@ export default function HoodRadar() {
         ))}
       </nav>
 
-      {tab === 'pnl' && <PnlLeaderboard explorerUrl={explorerUrl} />}
-
+      {tab === 'pnl' && (
+        <PnlLeaderboard
+          rows={pnlRows}
+          loading={pnl.loading}
+          configured={pnl.data?.configured ?? !pnl.loading}
+          error={pnl.data?.error}
+          generatedAt={pnl.data?.generatedAt}
+          explorerUrl={explorerUrl}
+          onSelect={openWallet}
+        />
+      )}
       {tab === 'leaderboard' && (
         <Leaderboard
           wallets={walletList}
@@ -102,6 +121,7 @@ export default function HoodRadar() {
         <Watchlist
           watched={watch.list}
           wallets={walletList}
+          pnlRows={pnlRows}
           explorerUrl={explorerUrl}
           loading={wallets.loading}
           onSelect={openWallet}
@@ -119,7 +139,9 @@ export default function HoodRadar() {
       )}
 
       <WalletDetail
+        address={selectedAddress}
         wallet={selectedWallet}
+        pnl={selectedPnl}
         explorerUrl={explorerUrl}
         onClose={() => setSelectedAddress(null)}
         isWatched={selectedAddress ? watch.has(selectedAddress) : false}
