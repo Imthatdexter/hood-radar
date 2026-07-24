@@ -92,9 +92,16 @@ export default function TokenExplorer({
       .sort((a, b) => (b.volume24h || 0) - (a.volume24h || 0));
   }, [tokens, query, filter]);
 
-  // Batch-enrich every token's market data from DexScreener (the agnt API ships
-  // price/holders as 0 for all tokens). One shared cache feeds cards + detail.
-  const tokenAddrs = useMemo(() => tokens.map((t) => t.address), [tokens]);
+  // Enrich every token's market data from DexScreener (the agnt API ships
+  // price/holders as 0 for all tokens). Priority order (volume desc) so the most
+  // active tokens fill in first. One shared cache feeds cards + detail.
+  const tokenAddrs = useMemo(
+    () =>
+      [...tokens]
+        .sort((a, b) => (b.volume24h || 0) - (a.volume24h || 0))
+        .map((t) => t.address),
+    [tokens],
+  );
   const { map: enrich, loading: dexLoading } = useDexEnrichment(tokenAddrs);
 
   if (selected) {
