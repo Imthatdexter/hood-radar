@@ -54,6 +54,14 @@ export function shortAddr(a: string | null | undefined): string {
   return a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
 }
 
+/* USD price with precision tuned to magnitude (stocks get 2dp, sub-cent tokens get more). */
+export function fmtPrice(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n) || n === 0) return '—';
+  const abs = Math.abs(n);
+  const decimals = abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
+  return '$' + n.toLocaleString('en-US', { maximumFractionDigits: decimals });
+}
+
 export function fmtPct(n: number | null | undefined, digits = 2): string {
   if (n == null || Number.isNaN(n)) return '—';
   const sign = n > 0 ? '+' : '';

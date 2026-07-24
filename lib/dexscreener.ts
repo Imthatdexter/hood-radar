@@ -47,6 +47,16 @@ export async function fetchDexPairs(
   }
 }
 
+// Coerce DexScreener's stringly-typed numbers to a finite number (0 if absent).
+export function dexNum(v: string | number | undefined | null): number {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  if (typeof v === 'string' && v !== '') {
+    const x = Number(v);
+    return Number.isFinite(x) ? x : 0;
+  }
+  return 0;
+}
+
 // Pick the most liquid pair as the "primary" market for a token.
 export function bestPair(pairs: DexPair[]): DexPair | null {
   if (!pairs.length) return null;

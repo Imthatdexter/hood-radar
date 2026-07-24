@@ -169,7 +169,6 @@ export default function HoodRadar() {
       {tab === 'stocks' && (
         <StocksView
           tokens={tokens}
-          rollup={chain.data?.officialRollup}
           explorerUrl={explorerUrl}
           onSelectToken={openToken}
         />

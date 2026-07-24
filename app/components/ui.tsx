@@ -53,6 +53,27 @@ export function Address({
   );
 }
 
+/* Muted em-dash placeholder for values we genuinely don't have. */
+export function Dash() {
+  return <span style={{ color: 'var(--muted-2)' }}>—</span>;
+}
+
+/* One cell of a token-card stat grid (label over value). */
+export function CardStat({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="tcs-label">{label}</div>
+      <div className="tcs-value">{children}</div>
+    </div>
+  );
+}
+
 export function Delta({ value }: { value: number | null | undefined }) {
   if (value == null || Number.isNaN(value))
     return <span className="delta delta--flat">—</span>;

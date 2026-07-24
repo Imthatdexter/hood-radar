@@ -4,15 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FeedPost, Token, Wallet } from '@/lib/types';
 import { fetchFeedPage } from '@/lib/api';
 import { aggregateByAgent, type AgentAgg } from '@/lib/derive';
-import { fmtNum, fmtUsd } from '@/lib/format';
-import { Address, Avatar, Badge, ShareButton, TokenLogo } from './ui';
-import {
-  bestPair,
-  dexEmbedUrl,
-  dexPageUrl,
-  fetchDexPairs,
-  type DexPair,
-} from '@/lib/dexscreener';
+import { fmtPrice, fmtUsd } from '@/lib/format';
+import { useDexEnrichment } from '@/lib/useDexEnrichment';
+import { dexEmbedUrl, dexNum, dexPageUrl, type DexPair } from '@/lib/dexscreener';
+import { Address, Avatar, Badge, CardStat, Dash, ShareButton, TokenLogo } from './ui';
 
 interface Props {
   tokens: Token[];
@@ -97,6 +92,11 @@ export default function TokenExplorer({
       .sort((a, b) => (b.volume24h || 0) - (a.volume24h || 0));
   }, [tokens, query, filter]);
 
+  // Batch-enrich every token's market data from DexScreener (the agnt API ships
+  // price/holders as 0 for all tokens). One shared cache feeds cards + detail.
+  const tokenAddrs = useMemo(() => tokens.map((t) => t.address), [tokens]);
+  const { map: enrich, loading: dexLoading } = useDexEnrichment(tokenAddrs);
+
   if (selected) {
     return (
       <TokenDetail
@@ -104,6 +104,8 @@ export default function TokenExplorer({
         wallets={wallets}
         explorerUrl={explorerUrl}
         feed={feed}
+        pair={enrich[selected.address.toLowerCase()]}
+        dexLoading={dexLoading}
         onSelectWallet={onSelectWallet}
         onBack={() => setSelected(null)}
       />
@@ -152,43 +154,39 @@ export default function TokenExplorer({
         </div>
       ) : (
         <div className="token-grid">
-          {filtered.slice(0, 120).map((t) => (
-            <div
-              className="token-card"
-              key={t.address}
-              onClick={() => setSelected(t)}
-            >
-              <div className="token-card-head">
-                <TokenLogo url={t.iconUrl} symbol={t.symbol} size={34} />
-                <div style={{ minWidth: 0 }}>
-                  <div className="token-card-name">{t.symbol}</div>
-                  <div className="token-card-sym">{t.name}</div>
+          {filtered.slice(0, 120).map((t) => {
+            const p = enrich[t.address.toLowerCase()];
+            // Prefer live DexScreener values; fall back to the (partial) agnt data.
+            const price = p ? dexNum(p.priceUsd) : t.price;
+            const mcap = p ? dexNum(p.fdv) || dexNum(p.marketCap) : t.marketCap;
+            const vol = p ? dexNum(p.volume?.h24) : t.volume24h;
+            const liq = p ? dexNum(p.liquidity?.usd) : 0;
+            return (
+              <div
+                className="token-card"
+                key={t.address}
+                onClick={() => setSelected(t)}
+              >
+                <div className="token-card-head">
+                  <TokenLogo url={t.iconUrl} symbol={t.symbol} size={34} />
+                  <div style={{ minWidth: 0 }}>
+                    <div className="token-card-name">{t.symbol}</div>
+                    <div className="token-card-sym">{t.name}</div>
+                  </div>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {t.official && <Badge kind="official">off</Badge>}
+                    <Badge kind={categoryOf(t)}>{categoryOf(t)}</Badge>
+                  </div>
                 </div>
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                  {t.official && <Badge kind="official">off</Badge>}
-                  <Badge kind={categoryOf(t)}>{categoryOf(t)}</Badge>
-                </div>
-              </div>
-              <div className="token-card-stats">
-                <div>
-                  <div className="tcs-label">Price</div>
-                  <div className="tcs-value">{fmtUsd(t.price, { compact: false })}</div>
-                </div>
-                <div>
-                  <div className="tcs-label">Mkt Cap</div>
-                  <div className="tcs-value">{fmtUsd(t.marketCap)}</div>
-                </div>
-                <div>
-                  <div className="tcs-label">Vol 24h</div>
-                  <div className="tcs-value">{fmtUsd(t.volume24h)}</div>
-                </div>
-                <div>
-                  <div className="tcs-label">Holders</div>
-                  <div className="tcs-value">{fmtNum(t.holders)}</div>
+                <div className="token-card-stats">
+                  <CardStat label="Price">{price ? fmtPrice(price) : <Dash />}</CardStat>
+                  <CardStat label="Mkt Cap">{mcap ? fmtUsd(mcap) : <Dash />}</CardStat>
+                  <CardStat label="Vol 24h">{vol ? fmtUsd(vol) : <Dash />}</CardStat>
+                  <CardStat label="Liquidity">{liq ? fmtUsd(liq) : <Dash />}</CardStat>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -200,6 +198,8 @@ function TokenDetail({
   wallets,
   explorerUrl,
   feed,
+  pair,
+  dexLoading,
   onSelectWallet,
   onBack,
 }: {
@@ -207,9 +207,18 @@ function TokenDetail({
   wallets: Wallet[] | null;
   explorerUrl?: string;
   feed: FeedPost[] | null;
+  pair?: DexPair | null;
+  dexLoading: boolean;
   onSelectWallet: (a: string) => void;
   onBack: () => void;
 }) {
+  // Live market values prefer DexScreener; holders aren't available anywhere, so
+  // that slot shows on-chain liquidity instead.
+  const livePrice = pair ? dexNum(pair.priceUsd) : token.price;
+  const liveMcap = pair ? dexNum(pair.fdv) || dexNum(pair.marketCap) : token.marketCap;
+  const liveVol = pair ? dexNum(pair.volume?.h24) : token.volume24h;
+  const liveLiq = pair ? dexNum(pair.liquidity?.usd) : 0;
+
   // Top holders among the smart-money wallets.
   const holders = useMemo(() => {
     if (!wallets) return [];
@@ -268,12 +277,14 @@ function TokenDetail({
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: 'var(--border)', borderBottom: '1px solid var(--border)' }}>
-        {[
-          { l: 'Price', v: fmtUsd(token.price, { compact: false }) },
-          { l: 'Market Cap', v: fmtUsd(token.marketCap) },
-          { l: 'Vol 24h', v: fmtUsd(token.volume24h) },
-          { l: 'Holders', v: fmtNum(token.holders) },
-        ].map((s) => (
+        {(
+          [
+            { l: 'Price', v: livePrice ? fmtPrice(livePrice) : <Dash /> },
+            { l: 'Market Cap', v: liveMcap ? fmtUsd(liveMcap) : <Dash /> },
+            { l: 'Vol 24h', v: liveVol ? fmtUsd(liveVol) : <Dash /> },
+            { l: 'Liquidity', v: liveLiq ? fmtUsd(liveLiq) : <Dash /> },
+          ] as const
+        ).map((s) => (
           <div className="summary-stat" key={s.l}>
             <span className="summary-stat-label">{s.l}</span>
             <span className="summary-stat-value">{s.v}</span>
@@ -283,7 +294,7 @@ function TokenDetail({
 
       <div style={{ padding: '14px 14px 0' }}>
         <div className="panel-section-title">Market · DexScreener</div>
-        <DexData token={token} />
+        <DexData pair={pair} loading={dexLoading} />
       </div>
 
       <div style={{ padding: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
@@ -349,21 +360,15 @@ function socialLabel(s: { type?: string; platform?: string; url: string }): stri
   return '🔗 link';
 }
 
-function DexData({ token }: { token: Token }) {
-  const [pairs, setPairs] = useState<DexPair[] | null>(null);
-  useEffect(() => {
-    let alive = true;
-    setPairs(null);
-    fetchDexPairs(token.address).then((p) => {
-      if (alive) setPairs(p);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [token.address]);
-
-  if (pairs === null) return <div className="empty-sub">Loading market data…</div>;
-  const pair = bestPair(pairs);
+function DexData({
+  pair,
+  loading,
+}: {
+  pair: DexPair | null | undefined;
+  loading: boolean;
+}) {
+  if (loading && pair === undefined)
+    return <div className="empty-sub">Loading market data…</div>;
   if (!pair) return <div className="empty-sub">No DexScreener market for this token.</div>;
 
   const pc = pair.priceChange ?? {};
