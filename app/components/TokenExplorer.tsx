@@ -5,7 +5,14 @@ import type { FeedPost, Token, Wallet } from '@/lib/types';
 import { fetchFeedPage } from '@/lib/api';
 import { aggregateByAgent, type AgentAgg } from '@/lib/derive';
 import { fmtNum, fmtUsd } from '@/lib/format';
-import { Address, Avatar, Badge, TokenLogo } from './ui';
+import { Address, Avatar, Badge, ShareButton, TokenLogo } from './ui';
+import {
+  bestPair,
+  dexEmbedUrl,
+  dexPageUrl,
+  fetchDexPairs,
+  type DexPair,
+} from '@/lib/dexscreener';
 
 interface Props {
   tokens: Token[];
@@ -246,6 +253,9 @@ function TokenDetail({
           </div>
         </div>
         <div className="toolbar">
+          <ShareButton
+            text={`$${token.symbol} on Robinhood Chain — live price, liquidity & top traders via Hood Radar`}
+          />
           <a
             className="btn btn--ghost"
             href={`${explorerUrl?.replace(/\/$/, '')}/token/${token.address}`}
@@ -269,6 +279,11 @@ function TokenDetail({
             <span className="summary-stat-value">{s.v}</span>
           </div>
         ))}
+      </div>
+
+      <div style={{ padding: '14px 14px 0' }}>
+        <div className="panel-section-title">Market · DexScreener</div>
+        <DexData token={token} />
       </div>
 
       <div style={{ padding: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
@@ -320,6 +335,103 @@ function TokenDetail({
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function socialLabel(s: { type?: string; platform?: string; url: string }): string {
+  const t = (s.type || s.platform || '').toLowerCase();
+  if (t.includes('twitter') || t === 'x') return '𝕏 X';
+  if (t.includes('telegram')) return '✈ telegram';
+  if (t.includes('discord')) return '💬 discord';
+  if (t.includes('website')) return '🌐 site';
+  return '🔗 link';
+}
+
+function DexData({ token }: { token: Token }) {
+  const [pairs, setPairs] = useState<DexPair[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setPairs(null);
+    fetchDexPairs(token.address).then((p) => {
+      if (alive) setPairs(p);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [token.address]);
+
+  if (pairs === null) return <div className="empty-sub">Loading market data…</div>;
+  const pair = bestPair(pairs);
+  if (!pair) return <div className="empty-sub">No DexScreener market for this token.</div>;
+
+  const pc = pair.priceChange ?? {};
+  const changes: [string, number | undefined][] = [
+    ['5m', pc.m5],
+    ['1h', pc.h1],
+    ['6h', pc.h6],
+    ['24h', pc.h24],
+  ];
+  const sites = pair.info?.websites ?? [];
+  const socials = pair.info?.socials ?? [];
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'baseline', marginBottom: 10 }}>
+        <div>
+          <div className="tcs-label">Price</div>
+          <div style={{ fontSize: 20, fontWeight: 700 }}>${pair.priceUsd ?? '—'}</div>
+        </div>
+        {changes.map(([lbl, val]) =>
+          val == null ? null : (
+            <div key={lbl}>
+              <div className="tcs-label">{lbl}</div>
+              <div className={`delta ${val >= 0 ? 'delta--up' : 'delta--down'}`}>
+                {val >= 0 ? '+' : ''}
+                {val.toFixed(2)}%
+              </div>
+            </div>
+          ),
+        )}
+        <div>
+          <div className="tcs-label">Liquidity</div>
+          <div style={{ fontWeight: 600 }}>{fmtUsd(pair.liquidity?.usd)}</div>
+        </div>
+        <div>
+          <div className="tcs-label">Vol 24h</div>
+          <div style={{ fontWeight: 600 }}>{fmtUsd(pair.volume?.h24)}</div>
+        </div>
+        {pair.fdv ? (
+          <div>
+            <div className="tcs-label">FDV</div>
+            <div style={{ fontWeight: 600 }}>{fmtUsd(pair.fdv)}</div>
+          </div>
+        ) : null}
+      </div>
+
+      {(sites.length > 0 || socials.length > 0) && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+          {sites.map((w) => (
+            <a key={w.url} className="btn btn--ghost" href={w.url} target="_blank" rel="noreferrer">
+              🌐 site
+            </a>
+          ))}
+          {socials.map((s) => (
+            <a key={s.url} className="btn btn--ghost" href={s.url} target="_blank" rel="noreferrer">
+              {socialLabel(s)}
+            </a>
+          ))}
+        </div>
+      )}
+
+      <div className="dex-chart">
+        <iframe src={dexEmbedUrl(pair.pairAddress)} title="DexScreener chart" loading="lazy" />
+      </div>
+      <div style={{ marginTop: 6 }}>
+        <a className="token-detail-back" href={dexPageUrl(pair.pairAddress)} target="_blank" rel="noreferrer">
+          Open on DexScreener ↗
+        </a>
       </div>
     </div>
   );

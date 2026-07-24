@@ -2,8 +2,8 @@
 
 import { useEffect } from 'react';
 import type { PnlRow, Wallet } from '@/lib/types';
-import { fmtNum, fmtUsd, relTime } from '@/lib/format';
-import { Address, Flash, TokenLogo } from './ui';
+import { fmtNum, fmtUsd, relTime, shortAddr } from '@/lib/format';
+import { Address, Flash, ShareButton, TokenLogo } from './ui';
 
 interface Props {
   address: string | null;
@@ -85,9 +85,15 @@ export default function WalletDetail({
               </div>
             )}
           </div>
-          <button className="x-btn" onClick={onClose} aria-label="Close">
-            ×
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <ShareButton
+              text={`Tracking ${shortAddr(address)} on Hood Radar — Robinhood Chain realized PnL, holdings & live trades`}
+              label="Share"
+            />
+            <button className="x-btn" onClick={onClose} aria-label="Close">
+              ×
+            </button>
+          </div>
         </div>
 
         <div className="panel-body">

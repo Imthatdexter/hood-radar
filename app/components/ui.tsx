@@ -207,3 +207,36 @@ export function ExplorerTxLink({
     </a>
   );
 }
+
+/* Share / deep-link helpers */
+
+export function currentUrl(): string {
+  return typeof window !== 'undefined' ? window.location.href : '';
+}
+
+export function tweetIntent(text: string, url: string) {
+  const u = new URL('https://twitter.com/intent/tweet');
+  u.searchParams.set('text', text);
+  if (url) u.searchParams.set('url', url);
+  window.open(u.toString(), '_blank', 'noopener,noreferrer');
+}
+
+export function ShareButton({
+  text,
+  label = 'Share',
+}: {
+  text: string;
+  label?: string;
+}) {
+  return (
+    <button
+      type="button"
+      className="btn btn--ghost"
+      onClick={() => tweetIntent(text, currentUrl())}
+      title="Share on X / Twitter"
+    >
+      𝕏 {label}
+    </button>
+  );
+}
+

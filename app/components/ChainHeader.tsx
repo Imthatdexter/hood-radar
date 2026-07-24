@@ -48,6 +48,8 @@ export default function ChainHeader({ chainData, error, loading }: Props) {
   const tp = chainData?.throughput;
   const fr = chainData?.freshness;
   const pools = chainData?.pools ?? [];
+  const venues = dex?.venues ?? [];
+  const venueTotal = venues.reduce((s, v) => s + (v.volume || 0), 0) || 1;
 
   const dexSeries = dex?.history?.map((h) => h.volume) ?? [];
   const tvlSeries = tvl?.history?.map((h) => h.volume) ?? [];
@@ -123,6 +125,30 @@ export default function ChainHeader({ chainData, error, loading }: Props) {
               <span className="pool-chip-dex">{p.dex}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {venues.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <div className="panel-section-title" style={{ marginBottom: 6 }}>
+            DEX Volume by Venue
+          </div>
+          {venues.slice(0, 8).map((v) => {
+            const pct = Math.max(1, Math.round(((v.volume || 0) / venueTotal) * 100));
+            return (
+              <div className="bar-row" key={v.name}>
+                <span className="bar-row-label" style={{ fontSize: 11 }}>
+                  {v.name}
+                </span>
+                <span className="bar-track">
+                  <span className="bar-fill" style={{ width: `${pct}%` }} />
+                </span>
+                <span className="bar-value">
+                  {fmtUsd(v.volume)} · {pct}%
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
 

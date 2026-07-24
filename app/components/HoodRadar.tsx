@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fetchChain, fetchWallets } from '@/lib/api';
 import type { PnlApiResponse } from '@/lib/types';
 import { usePollingData } from '@/lib/usePollingData';
@@ -12,9 +12,10 @@ import Agents from './Agents';
 import LiveFeed from './LiveFeed';
 import Watchlist from './Watchlist';
 import TokenExplorer from './TokenExplorer';
+import StocksView from './StocksView';
 import WalletDetail from './WalletDetail';
 
-type Tab = 'pnl' | 'leaderboard' | 'agents' | 'feed' | 'watchlist' | 'tokens';
+type Tab = 'pnl' | 'leaderboard' | 'agents' | 'feed' | 'watchlist' | 'tokens' | 'stocks';
 
 async function fetchPnl(): Promise<PnlApiResponse> {
   const r = await fetch('/api/pnl', { cache: 'no-store' });
@@ -31,10 +32,37 @@ export default function HoodRadar() {
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
   const [focusSymbol, setFocusSymbol] = useState<string | null>(null);
 
+  // Deep links: read ?tab/?w/?t on load, then keep the URL in sync so any
+  // wallet/token/tab is shareable.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const tb = p.get('tab');
+    const w = p.get('w');
+    const t = p.get('t');
+    if (tb) setTab(tb as Tab);
+    if (w) setSelectedAddress(w);
+    if (t) {
+      setFocusSymbol(t);
+      setTab('tokens');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const p = new URLSearchParams();
+    if (tab !== 'pnl') p.set('tab', tab);
+    if (selectedAddress) p.set('w', selectedAddress);
+    if (focusSymbol && tab === 'tokens') p.set('t', focusSymbol);
+    const qs = p.toString();
+    const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    window.history.replaceState(null, '', url);
+  }, [tab, selectedAddress, focusSymbol]);
+
   const explorerUrl = chain.data?.chain.explorerUrl;
   const tokens = chain.data?.tokens ?? [];
   const walletList = wallets.data?.wallets ?? null;
   const pnlRows = pnl.data?.rows ?? [];
+  const stockCount = tokens.filter((t) => /stock|etf/i.test(t.category || '')).length;
 
   const lc = (a: string) => a.toLowerCase();
   const selectedWallet =
@@ -58,6 +86,7 @@ export default function HoodRadar() {
     { key: 'feed', label: 'Live Feed' },
     { key: 'watchlist', label: 'Watchlist', count: watch.list.length },
     { key: 'tokens', label: 'Tokens', count: tokens.length },
+    { key: 'stocks', label: 'Stocks', count: stockCount },
   ];
 
   return (
@@ -135,6 +164,14 @@ export default function HoodRadar() {
           explorerUrl={explorerUrl}
           onSelectWallet={openWallet}
           focusSymbol={focusSymbol}
+        />
+      )}
+      {tab === 'stocks' && (
+        <StocksView
+          tokens={tokens}
+          rollup={chain.data?.officialRollup}
+          explorerUrl={explorerUrl}
+          onSelectToken={openToken}
         />
       )}
 
