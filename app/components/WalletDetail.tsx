@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import type { PnlRow, Wallet } from '@/lib/types';
 import { fmtNum, fmtUsd, relTime, shortAddr } from '@/lib/format';
-import { Address, Flash, ShareButton, TokenLogo } from './ui';
+import { Address, CAPPED_TOOLTIP, Flash, ShareButton, TokenLogo } from './ui';
 
 interface Props {
   address: string | null;
@@ -81,7 +81,13 @@ export default function WalletDetail({
             )}
             {wallet?.capped && (
               <div style={{ marginTop: 6 }}>
-                <span className="badge badge--capped">capped volume</span>
+                <span
+                  className="badge badge--capped"
+                  title={CAPPED_TOOLTIP}
+                  style={{ cursor: 'help' }}
+                >
+                  capped volume
+                </span>
               </div>
             )}
           </div>

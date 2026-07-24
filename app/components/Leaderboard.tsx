@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { Wallet } from '@/lib/types';
 import { fmtNum, fmtUsd, relTime } from '@/lib/format';
-import { Address, Badge, Flash, TokenLogo } from './ui';
+import { Address, Badge, CAPPED_TOOLTIP, Flash, TokenLogo } from './ui';
 
 type SortKey = 'vol24h' | 'vol7d' | 'trades24h' | 'trades7d' | 'holdingsUsd' | 'tokens';
 
@@ -126,7 +126,7 @@ export default function Leaderboard({
                     </td>
                     <td>
                       <Address address={w.address} explorerUrl={explorerUrl} />
-                      {w.capped && <span style={{ marginLeft: 6 }}><Badge kind="capped">capped</Badge></span>}
+                      {w.capped && <span style={{ marginLeft: 6 }}><Badge kind="capped" title={CAPPED_TOOLTIP}>capped</Badge></span>}
                       {isWatched && <span style={{ marginLeft: 6, color: 'var(--green)' }} title="watched">★</span>}
                     </td>
                     <td style={{ textAlign: 'right' }}>

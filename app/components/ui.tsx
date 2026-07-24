@@ -129,13 +129,27 @@ export function Flash({
 export function Badge({
   children,
   kind,
+  title,
 }: {
   children: React.ReactNode;
   kind?: string;
+  title?: string;
 }) {
   const cls = kind ? `badge--${kind}` : '';
-  return <span className={`badge ${cls}`}>{children}</span>;
+  return (
+    <span
+      className={`badge ${cls}`}
+      title={title}
+      style={title ? { cursor: 'help' } : undefined}
+    >
+      {children}
+    </span>
+  );
 }
+
+/* Shared explanation for the `capped` wallet flag (source indexer undercounts). */
+export const CAPPED_TOOLTIP =
+  'Volume & trades may be understated — the source indexer stops at a per-wallet limit, so these figures are partial (a lower bound), not a full total.';
 
 /* Colored glyph avatar. */
 export function Avatar({
