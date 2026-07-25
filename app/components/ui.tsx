@@ -74,6 +74,33 @@ export function CardStat({
   );
 }
 
+/* Compact "copy contract address" chip for token/stock cards.
+   Shows a truncated address; click copies the full address and flashes "copied".
+   stopPropagation so the card's own click (open detail) doesn't fire. */
+export function CopyAddress({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
+  return (
+    <button
+      type="button"
+      className="addr-copy"
+      onClick={copy}
+      title={`Copy contract address ${address}`}
+    >
+      {copied ? '✓ copied' : `${shortAddr(address)} ⧉`}
+    </button>
+  );
+}
+
 export function Delta({ value }: { value: number | null | undefined }) {
   if (value == null || Number.isNaN(value))
     return <span className="delta delta--flat">—</span>;

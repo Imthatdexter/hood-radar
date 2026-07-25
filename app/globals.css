@@ -905,6 +905,8 @@ table.table {
 .tcs-label { color: var(--muted-2); font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
 .tcs-value { font-weight: 600; font-variant-numeric: tabular-nums; }
 
+.token-card-addr { margin-top: 10px; }
+
 .token-detail-back {
   cursor: pointer;
   color: var(--muted);

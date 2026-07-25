@@ -5,7 +5,7 @@ import type { Token } from '@/lib/types';
 import { dexNum } from '@/lib/dexscreener';
 import { useDexEnrichment } from '@/lib/useDexEnrichment';
 import { fmtNum, fmtPrice, fmtUsd } from '@/lib/format';
-import { Badge, CardStat, Dash, TokenLogo } from './ui';
+import { Badge, CardStat, CopyAddress, Dash, TokenLogo } from './ui';
 
 interface Props {
   tokens: Token[];
@@ -122,6 +122,9 @@ export default function StocksView({ tokens, onSelectToken }: Props) {
                   <CardStat label="Vol 24h">{vol ? fmtUsd(vol) : <Dash />}</CardStat>
                   <CardStat label="Liquidity">{liq ? fmtUsd(liq) : <Dash />}</CardStat>
                   <CardStat label="FDV">{fdv ? fmtUsd(fdv) : <Dash />}</CardStat>
+                </div>
+                <div className="token-card-addr">
+                  <CopyAddress address={t.address} />
                 </div>
               </div>
             );

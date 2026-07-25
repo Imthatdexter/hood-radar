@@ -7,7 +7,7 @@ import { aggregateByAgent, type AgentAgg } from '@/lib/derive';
 import { fmtPrice, fmtUsd } from '@/lib/format';
 import { useDexEnrichment } from '@/lib/useDexEnrichment';
 import { dexEmbedUrl, dexNum, dexPageUrl, type DexPair } from '@/lib/dexscreener';
-import { Address, Avatar, Badge, CardStat, Dash, ShareButton, TokenLogo } from './ui';
+import { Address, Avatar, Badge, CardStat, CopyAddress, Dash, ShareButton, TokenLogo } from './ui';
 
 interface Props {
   tokens: Token[];
@@ -190,6 +190,9 @@ export default function TokenExplorer({
                   <CardStat label="Mkt Cap">{mcap ? fmtUsd(mcap) : <Dash />}</CardStat>
                   <CardStat label="Vol 24h">{vol ? fmtUsd(vol) : <Dash />}</CardStat>
                   <CardStat label="Liquidity">{liq ? fmtUsd(liq) : <Dash />}</CardStat>
+                </div>
+                <div className="token-card-addr">
+                  <CopyAddress address={t.address} />
                 </div>
               </div>
             );
